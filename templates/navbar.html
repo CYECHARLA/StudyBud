@@ -6,10 +6,16 @@
     <input type="text" name="q" placeholder="Search Rooms...">
     <input type="submit" value="Search">
 </form>
-{%if request.user.is_authenticated %}
-<p>Hello {{ request.user.username|capfirst }}</p>
-<a href="{%url 'logout'%}">Logout</a>
-{%else%}
-<a href="{%url 'login'%}">Login</a>
-{%endif%}
+{% if request.user.is_authenticated %}
+    <p>Hello {{ request.user.username|capfirst }}</p>
+    <a href="{% url 'logout' %}">Logout</a>
+    {% if request.path != '/' %}
+        | <a href="{% url 'home' %}">Home</a>
+    {% endif %}
+{% else %}
+    <a href="{% url 'login' %}">Login</a>
+    {% if request.path != '/' %}
+        | <a href="{% url 'home' %}">Home</a>
+    {% endif %}
+{% endif %}
 <hr>

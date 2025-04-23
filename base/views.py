@@ -64,18 +64,51 @@ def register_page(request):
             return redirect('register')
     return render(request, 'base/login_register.html', {'form': form})
 
+from django.db.models import Q
+from .models import Room, Topic, Message
+
 def home(request):
-    q = request.GET.get('q') if request.GET.get('q') != None else ''
-    rooms = Room.objects.filter(Q(topic__name__icontains=q)
-                                | Q(name__icontains=q)
-                                | Q(description__icontains=q)
-                                | Q(host__username__icontains=q)
-                                ).distinct().order_by('-updated')
-                                # | Q(topic__name__icontains=q)
+    # Get the search query for rooms and messages separately
+    q = request.GET.get('q') if request.GET.get('q') else ''
+    q_message = request.GET.get('q_message') if request.GET.get('q_message') else ''
+
+    # Room search: Filter based on 'q' (for room search)
+    if q:
+        rooms = Room.objects.filter(
+            Q(topic__name__icontains=q) |
+            Q(name__icontains=q) |
+            Q(description__icontains=q) |
+            Q(host__username__icontains=q)
+        ).distinct().order_by('-updated')
+    else:
+        rooms = Room.objects.all().order_by('-updated')
+
+    # Message search: Filter based on 'q_message' (for room message search)
+    if q_message:
+        room_messages = Message.objects.filter(
+            Q(room__topic__name__icontains=q_message) |
+            Q(room__name__icontains=q_message) |
+            Q(body__icontains=q_message) |
+            Q(user__username__icontains=q_message)
+        ).order_by('updated', '-created')
+    else:
+        room_messages = Message.objects.filter(Q(room__topic__name__icontains=q)).order_by('-created')[:5]
+
+    # Topics and room count
     topics = Topic.objects.order_by('-views')[:5]
     room_count = rooms.count()
-    context = {'rooms': rooms, 'topics': topics, 'room_count': room_count}
+
+    # Context to pass to the template
+    context = {
+        'rooms': rooms,
+        'topics': topics,
+        'room_count': room_count,
+        'room_messages': room_messages
+    }
+
     return render(request, 'base/home.html', context)
+
+
 
 def room (request, pk):
     room = Room.objects.get(id=pk)
@@ -139,16 +172,43 @@ def delete_room(request, pk):
     return render(request, 'base/delete.html', {'obj': room})
 
 
+# @login_required(login_url='login')
+# def delete_message(request, pk):
+#     message = Message.objects.get(id=pk)
+
+#     if request.user != message.user and not request.user.is_superuser:
+#      return HttpResponse('You are not permitted to Delete the message!')
+
+#     if request.method == 'POST':
+#         room_id = message.room.id  # capture room before deletion
+#         message.delete()
+#         return redirect('room', pk=room_id) 
+
+#     return render(request, 'base/delete.html', {'obj': message})
+
+# from django.shortcuts import redirect, render
+# from django.http import HttpResponse
+# from django.contrib.auth.decorators import login_required
+
 @login_required(login_url='login')
 def delete_message(request, pk):
     message = Message.objects.get(id=pk)
 
     if request.user != message.user and not request.user.is_superuser:
-     return HttpResponse('You are not permitted to Delete the message!')
+        return HttpResponse('You are not permitted to delete the message!')
 
     if request.method == 'POST':
         room_id = message.room.id  # capture room before deletion
         message.delete()
-        return redirect('room', pk=room_id) 
+
+        # Check the referrer URL to decide where to redirect
+        referer = request.META.get('HTTP_REFERER')
+        
+        if referer and 'room' in referer:
+            # If the user came from a specific room page, redirect to that room
+            return redirect('room', pk=room_id)
+        else:
+            # Otherwise, redirect to the home page
+            return redirect('home')
 
     return render(request, 'base/delete.html', {'obj': message})
