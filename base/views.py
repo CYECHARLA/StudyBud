@@ -141,7 +141,7 @@ def create_room(request):
         form = RoomForm(request.POST)
         if form.is_valid():
             room = form.save(commit=False)
-            room.host = request.user  # Automatically set the host to the logged-in user
+            room.host = request.user
             room.save()
             return redirect('home')
         
