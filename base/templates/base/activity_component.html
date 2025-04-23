@@ -1,0 +1,23 @@
+<h3>Recent Activity</h3>
+<hr>
+<form method="GET" action="{% url 'home' %}" style="margin-bottom: 15px;">
+    <input type="text" name="q_message" placeholder="Search messages, rooms, users..." value="{{ request.GET.q_message }}">
+    <button type="submit">Search</button>
+</form>
+
+<div>
+    {% for message in room_messages %}
+        <div style="margin-bottom: 15px;">
+            <small><strong>{{ message.room }}</strong></small>
+            <br>
+            <small><strong><a href="{{%url 'user-profile' message.user.id}}">@{{ message.user.username }}</a></strong> • {{ message.created|timesince }} ago</small>
+            <p>{{ message}}</p>
+            {% if request.user == message.user and request.user.is_authenticated %}
+            <a href={%url 'delete-message' message.id%}>Delete</a>
+            {% endif %}
+            <hr>
+        </div>
+    {% empty %}
+        <p>No recent messages found.</p>
+    {% endfor %}
+</div>
