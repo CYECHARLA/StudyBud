@@ -1,0 +1,38 @@
+{%extends 'main.html'%}
+
+{%block content%}
+<style>
+    .profile-container {
+        display: grid;
+        grid-template-columns: 1fr 3fr 1fr;
+        gap: 20px;
+    }
+    .comment-wrapper{
+        margin: 20px 0;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+    }
+    .message{
+        margin-bottom: 10px;
+    }
+    .comment-form{
+        margin-top: 20px;
+    }
+</style>
+<h1>{{user.username}}</h1>
+
+<div class="profile-container">
+    <div>
+        {% include 'base/topics_component.html' %}
+    </div>
+
+    <div>
+        {% include 'base/feed_component.html' %}
+    </div>
+
+    <div>
+        {% include 'base/activity_component.html' %}
+    </div>
+</div>
+{%endblock%}
