@@ -23,7 +23,7 @@
 
             <div class="form__group">
               <label for="room_topic">Room Topic</label>
-              <input required type="text" value="room.topic.name" name="topic" id="room_topic" list="topic-list"/>
+              <input required type="text" name="topic" id="room_topic" list="topic-list"/>
               <datalist id="topic-list">
                 <select id="room_topic">
                   {% for topic in topics %}

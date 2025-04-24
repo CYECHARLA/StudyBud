@@ -8,7 +8,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.db.models import Q
 from django.http import HttpResponse
 from .models import Room, Topic, Message
-from .forms import RoomForm
+from .forms import RoomForm, UserForm
 from django.contrib.auth.models import User
 
 # Create your views here.
@@ -219,17 +219,29 @@ def delete_message(request, pk):
         return HttpResponse('You are not permitted to delete the message!')
 
     if request.method == 'POST':
-        room_id = message.room.id  # capture room before deletion
+        room_id = message.room.id  # capture before deletion
         message.delete()
 
-        # Check the referrer URL to decide where to redirect
-        referer = request.META.get('HTTP_REFERER')
-        
-        if referer and 'room' in referer:
-            # If the user came from a specific room page, redirect to that room
+        # Check the 'next' input field from the form
+        next_url = request.POST.get('next')
+        if next_url and 'room' in next_url:
             return redirect('room', pk=room_id)
+        elif next_url:
+            return redirect(next_url)
         else:
-            # Otherwise, redirect to the home page
             return redirect('home')
 
     return render(request, 'base/delete.html', {'obj': message})
+
+
+@login_required(login_url='login')
+def update_user(request):
+    user = request.user
+    form = UserForm(instance=user)  
+    if request.method == 'POST':
+        form = UserForm(request.POST, instance=user)
+        if form.is_valid():
+            form.save()
+            return redirect('user-profile', pk=user.id)
+    context = {'form': form}  
+    return render(request, 'base/update_user.html', context)
