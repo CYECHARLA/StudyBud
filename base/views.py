@@ -10,6 +10,7 @@ from django.http import HttpResponse
 from .models import Room, Topic, Message
 from .forms import RoomForm, UserForm
 from django.contrib.auth.models import User
+from django.contrib import messages
 
 # Create your views here.
 # rooms = [
@@ -36,7 +37,6 @@ def login_page(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            messages.success(request, f'Welcome back, {user.username}!')
             return redirect('home')
         else:
             messages.error(request, 'Incorrect password')
@@ -48,6 +48,7 @@ def logout_user(request):
     logout(request)
     return redirect('home')
 
+
 def register_page(request):
     form = UserCreationForm()
     if request.method == 'POST':
@@ -57,18 +58,20 @@ def register_page(request):
             user.username = user.username.lower()
             user.save()
             login(request, user)
-            messages.success(request, 'Account created successfully!')
+            # Set session flag
+            request.session['account_created'] = True
             return redirect('home')
         else:
-            messages.error(request, 'An error occurred during registration') # flash message
-            return redirect('register')
-    return render(request, 'base/login_register.html', {'form': form})
-
-from django.db.models import Q
-from .models import Room, Topic, Message
+            # This will automatically handle form error messages
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, error)
+    context = {'form': form, 'error_message': messages}
+    return render(request, 'base/login_register.html', context)
 
 def home(request):
     # Get the search query for rooms and messages separately
+    show_popup = request.session.pop('account_created', False)
     q = request.GET.get('q') if request.GET.get('q') else ''
     q_message = request.GET.get('q_message') if request.GET.get('q_message') else ''
 
@@ -103,7 +106,9 @@ def home(request):
         'rooms': rooms,
         'topics': topics,
         'room_count': room_count,
-        'room_messages': room_messages
+        'room_messages': room_messages,
+        'show_popup': show_popup,
+        'popup_message': "🎉 Account created successfully!" if show_popup else "",
     }
 
     return render(request, 'base/home.html', context)
@@ -192,25 +197,6 @@ def delete_room(request, pk):
 
     return render(request, 'base/delete.html', {'obj': room})
 
-
-# @login_required(login_url='login')
-# def delete_message(request, pk):
-#     message = Message.objects.get(id=pk)
-
-#     if request.user != message.user and not request.user.is_superuser:
-#      return HttpResponse('You are not permitted to Delete the message!')
-
-#     if request.method == 'POST':
-#         room_id = message.room.id  # capture room before deletion
-#         message.delete()
-#         return redirect('room', pk=room_id) 
-
-#     return render(request, 'base/delete.html', {'obj': message})
-
-# from django.shortcuts import redirect, render
-# from django.http import HttpResponse
-# from django.contrib.auth.decorators import login_required
-
 @login_required(login_url='login')
 def delete_message(request, pk):
     message = Message.objects.get(id=pk)
@@ -245,3 +231,15 @@ def update_user(request):
             return redirect('user-profile', pk=user.id)
     context = {'form': form}  
     return render(request, 'base/update_user.html', context)
+
+
+def topics_page(request):
+    q = request.GET.get('q') if request.GET.get('q') else ''
+    topics = Topic.objects.filter(name__icontains=q)
+    context ={'topics': topics}
+    return render(request, 'base/topics_page.html', context)
+
+def activity_page(request):
+    room_messages = Message.objects.all()
+    context = {'room_messages': room_messages}
+    return render(request, 'base/activity.html', context)
