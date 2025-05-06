@@ -56,8 +56,7 @@ python -m venv venv
 source venv/bin/activate   # or venv\Scripts\activate on Windows
 pip install -r requirements.txt
 
-
-### 🗃️ Run migrations and start the server
+🗃️ Run migrations and start the server
 
 ```bash
 python manage.py migrate
